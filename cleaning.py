@@ -45,9 +45,3 @@ def load_and_clean(df):
 
     ## return the table
     return(df)
-
-
-data = pd.read_csv('data/diabetic_data.csv')
-
-clean = load_and_clean(data)
-print(clean.head())
