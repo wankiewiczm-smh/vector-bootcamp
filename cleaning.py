@@ -38,9 +38,16 @@ def load_and_clean(df):
     df['female'] = df['gender'].apply(
         lambda x: 1 if x == 'Female' else 0)
 
+    df = df.drop(['gender'], axis = 1)
+
     ## Assign ? Race with "Other"
     df['race'] = df['race'].apply(lambda x: "Other" if x == "?" else x)
 
     ## return the table
     return(df)
 
+
+data = pd.read_csv('data/diabetic_data.csv')
+
+clean = load_and_clean(data)
+print(clean.head())
