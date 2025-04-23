@@ -12,7 +12,7 @@ def load_and_clean(df):
     df['total_previous_visits'] = df['number_outpatient'] + df['number_inpatient'] + df['number_emergency']
 
     ## create outcome column, convert to binary
-    df = (df['readmitted'] == '<30').astype(int)
+    df['readmit30'] = (df['readmitted'] == '<30').astype(int)
 
     ## remove unnecessary columns
     df = df.drop(['weight', 'encounter_id', 'patient_nbr', 'medical_specialty', 'payer_code', 'readmitted'], axis = 1)
