@@ -43,5 +43,8 @@ def load_and_clean(df):
     ## Assign ? Race with "Other"
     df['race'] = df['race'].apply(lambda x: "Other" if x == "?" else x)
 
+    ## drop expired encounters: discharge_disposition in {11, 19, 20, 21}
+    df = df[~df['discharge_disposition_id'].isin([11, 19, 20, 21])]
+
     ## return the table
     return(df)
