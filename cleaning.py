@@ -1,5 +1,5 @@
 import pandas as pd
-
+from collections import defaultdict
 ### load in table and clean
 def load_and_clean(df):
     """
@@ -43,7 +43,6 @@ def load_and_clean(df):
     ## Assign ? Race with "Other"
     df['race'] = df['race'].apply(lambda x: "Other" if x == "?" else x)
 
-    ## Map diagnosis to CCS 
     ccs_mapping = pd.read_csv("./data/ccs_multi_dx_tool_2015.csv", dtype = str)
     # Clean CCS mapping column names and values
     ccs_mapping.columns = ccs_mapping.columns.str.strip("'").str.strip()
@@ -53,7 +52,7 @@ def load_and_clean(df):
         "CCS LVL 1 LABEL": "ccs_description"
     })
     ccs_mapping["icd9_code"] = ccs_mapping["icd9_code"].str.strip("'").str.strip()
-    # Remove dots from ICD-9 codes
+    # SRemove dots from ICD-9 codes
     for col in ["diag_1", "diag_2", "diag_3"]:
         df[f"{col}_clean"] = df[col].str.replace(".", "", regex=False)
 
