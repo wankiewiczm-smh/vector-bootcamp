@@ -18,12 +18,20 @@ clean_data['max_glu_serum'] = clean_data['max_glu_serum'].\
 clean_data['A1Cresult'] = clean_data['A1Cresult'].\
     apply(lambda x: 'Unknown' if type(x) != str else x)
 
-#clean_data = clean_data[~clean_data['']]
-'''
-run model on only readmit30 ~ total_patient_visit + diag_1_ccs + 
-number_lab_procedures + time_in_hospital + number_diagnoses + age + race + 
+# reduced model 1: using total previous visits
+#clean_data = clean_data[['readmit30', 'total_previous_visits', 'diag_1_ccs',
+#                         'discharge_disposition_id', 'num_lab_procedures',
+#                         'time_in_hospital', 'number_diagnoses', 'age', 'race']]
+# reduced model 2: using total_inpatient_visits
+#clean_data = clean_data[['readmit30', 'number_inpatient', 'diag_1_ccs',
+#                         'discharge_disposition_id', 'num_lab_procedures',
+#                         'time_in_hospital', 'number_diagnoses', 'age', 'race']]
+# reduced model 3: using all diagnoses and total_previous visits
+clean_data = clean_data[['readmit30', 'total_previous_visits', 'diag_1_ccs',
+                         'diag_2_ccs', 'diag_3_ccs', 'discharge_disposition_id',
+                         'num_lab_procedures', 'time_in_hospital',
+                         'number_diagnoses', 'age', 'race']]
 
-'''
 # Split into covariates and target
 X = clean_data.drop('readmit30', axis=1)
 y = clean_data['readmit30']
