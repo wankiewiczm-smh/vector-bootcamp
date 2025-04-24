@@ -43,5 +43,40 @@ def load_and_clean(df):
     ## Assign ? Race with "Other"
     df['race'] = df['race'].apply(lambda x: "Other" if x == "?" else x)
 
+    ## Map diagnosis to CCS 
+    ccs_mapping = pd.read_csv("./data/ccs_multi_dx_tool_2015.csv", dtype = str)
+    # Clean CCS mapping column names and values
+    ccs_mapping.columns = ccs_mapping.columns.str.strip("'").str.strip()
+    ccs_mapping = ccs_mapping.rename(columns={
+        "ICD-9-CM CODE": "icd9_code",
+        "CCS LVL 1": "ccs_level_1",
+        "CCS LVL 1 LABEL": "ccs_description"
+    })
+    ccs_mapping["icd9_code"] = ccs_mapping["icd9_code"].str.strip("'").str.strip()
+    # Remove dots from ICD-9 codes
+    for col in ["diag_1", "diag_2", "diag_3"]:
+        df[f"{col}_clean"] = df[col].str.replace(".", "", regex=False)
+
+    # Build prefix-based lookup table for fallback matching
+    prefix_map = defaultdict(lambda: None)
+    for code, desc in zip(ccs_mapping["icd9_code"], ccs_mapping["ccs_description"]):
+        for i in range(3, len(code) + 1):  # Use prefixes starting at 3 digits
+            prefix = code[:i]
+            if prefix not in prefix_map:
+                prefix_map[prefix] = desc
+
+    # Matching function using longest prefix available
+    def map_icd_to_ccs(code):
+        if pd.isna(code):
+            return None
+        for i in range(len(code), 2, -1):
+            prefix = code[:i]
+            if prefix in prefix_map:
+                return prefix_map[prefix]
+        return None
+
+    # Map each diagnosis column to CCS group using prefix match
+    for col in ["diag_1_clean", "diag_2_clean", "diag_3_clean"]:
+        df[col.replace("_clean", "_ccs")] = df[col].map(map_icd_to_ccs)
     ## return the table
     return(df)
