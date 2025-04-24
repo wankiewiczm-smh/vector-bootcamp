@@ -31,6 +31,9 @@ def load_and_clean(df):
                      }
     df['age'] = df['age'].apply(lambda x: age_transform[x])
 
+    # remove paediatrics
+    # df = df[~df['age'].isin([5, 15])]
+
     ## Drop missing gender
     df = df.dropna(subset=['gender'])
 
