@@ -9,7 +9,7 @@ def load_and_clean(df):
     """
 
     ## create total_previous_visits
-    df['total_previous_visits'] = df['number_outpatient'] + df['number_inpatient'] + df['number_emergency']
+    df['total_previous_visits'] = df['number_inpatient'] + df['number_emergency']
 
     ## create outcome column, convert to binary
     df['readmit30'] = (df['readmitted'] == '<30').astype(int)
