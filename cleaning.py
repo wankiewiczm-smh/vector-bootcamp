@@ -1,4 +1,5 @@
 import pandas as pd
+from collections import defaultdict
 
 ### load in table and clean
 def load_and_clean(df):
