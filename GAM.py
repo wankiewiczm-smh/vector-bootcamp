@@ -54,11 +54,6 @@ np.random.seed(185)
 data = pd.read_csv('data/diabetic_data.csv')
 clean_data = cleaning.load_and_clean(data)
 
-# imputing missing values from t
-clean_data['max_glu_serum'] = clean_data['max_glu_serum'].\
-    apply(lambda x: 'Unknown' if type(x) != str else x)
-clean_data['A1Cresult'] = clean_data['A1Cresult'].\
-    apply(lambda x: 'Unknown' if type(x) != str else x)
 
 df_processed, scaler, cat_mapping, data_numerical_orig, numerical_columns = \
     preprocess_data(clean_data)

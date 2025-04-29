@@ -4,9 +4,19 @@ import cleaning
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
+import matplotlib.pyplot as plt
+from imblearn.over_sampling import SMOTE
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    confusion_matrix,
+    ConfusionMatrixDisplay
+)
 
 from model.nbm_model import ConceptNBMNary
 from utils.plot_shapefunc import plot_nbm_shape_functions_with_feature_density
@@ -26,15 +36,17 @@ clean_data['max_glu_serum'] = clean_data['max_glu_serum'].\
     apply(lambda x: 'Unknown' if type(x) != str else x)
 clean_data['A1Cresult'] = clean_data['A1Cresult'].\
     apply(lambda x: 'Unknown' if type(x) != str else x)
-
+u
 # select variables of interest
 clean_data = clean_data[['readmit30', 'number_inpatient', 'diag_1_ccs',
                          'discharge_disposition_id', 'num_lab_procedures',
+                         'max_glu_serum', 'A1Cresult',
                          'time_in_hospital', 'number_diagnoses', 'age', 'race']]
 
 # Split into covariates and target
 X = clean_data.drop('readmit30', axis=1)
 y = clean_data['readmit30']
+
 
 categorical_columns = X.select_dtypes(include=['object']).columns
 X_encoded = pd.get_dummies(X, drop_first=True)
@@ -46,6 +58,8 @@ X_scaled = scaler.fit_transform(X_encoded)
 # split dataset into training and testing
 X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2,
                                                     random_state=815)
+
+X_train, y_train, = SMOTE(random_state=815).fit_resample(X_train, y_train)
 
 # Convert data to torch tensors
 X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
@@ -87,7 +101,7 @@ model = ConceptNBMNary(
 
 # Use Mean Squared Error for regression
 # but try NLLLoss after
-criterion = nn.MSELoss()
+criterion = nn.BCEWithLogitsLoss() #nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
 # ------------------------------
@@ -125,7 +139,7 @@ for epoch in range(num_epochs):
     # RMSE = sqrt(test_loss)
     print(f"RMSE: {test_loss ** 0.5:.4f}")
 
-
+'''
 # Plot the shape functions of the model along with feature density
 
 device = "cpu"
@@ -144,3 +158,44 @@ plot_nbm_shape_functions_with_feature_density(
     plot_cols=4,
     red_alpha=0.4
 )
+'''
+
+# Put model in evaluation mode
+model.eval()
+
+# Get predictions
+all_preds = []
+all_labels = []
+
+with torch.no_grad():
+    for inputs, labels in test_loader:
+        outputs = model(inputs)
+
+        # If outputs is tuple, unpack it
+        if isinstance(outputs, tuple):
+            outputs = outputs[0]
+
+        # Convert probabilities to binary predictions (threshold = 0.5)
+        preds = (outputs > 0.5).int().squeeze()
+
+        all_preds.extend(preds.cpu().numpy())
+        all_labels.extend(labels.cpu().numpy().astype(int))
+
+# Compute confusion matrix
+cm = confusion_matrix(all_labels, all_preds)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=[0, 1])
+disp.plot(cmap='Blues')
+plt.title("Confusion Matrix")
+plt.show()
+
+# Compute performance metrics
+accuracy = accuracy_score(all_labels, all_preds)
+precision = precision_score(all_labels, all_preds)
+recall = recall_score(all_labels, all_preds)
+f1 = f1_score(all_labels, all_preds)
+
+# Print them nicely
+print(f"Accuracy: {accuracy:.4f}")
+print(f"Precision: {precision:.4f}")
+print(f"Recall: {recall:.4f}")
+print(f"F1 Score: {f1:.4f}")
