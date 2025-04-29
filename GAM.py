@@ -54,16 +54,30 @@ np.random.seed(185)
 data = pd.read_csv('data/diabetic_data.csv')
 clean_data = cleaning.load_and_clean(data)
 
+# imputing missing values from t
+clean_data['max_glu_serum'] = clean_data['max_glu_serum'].\
+    apply(lambda x: 'Unknown' if type(x) != str else x)
+clean_data['A1Cresult'] = clean_data['A1Cresult'].\
+    apply(lambda x: 'Unknown' if type(x) != str else x)
+
 df_processed, scaler, cat_mapping, data_numerical_orig, numerical_columns = \
     preprocess_data(clean_data)
 print("Processed data head:")
 print(df_processed.head())
 
-df_processed = df_processed[['readmit30', 'number_inpatient', 'diag_1_ccs',
-                             'discharge_disposition_id',
-                             'num_lab_procedures', 'time_in_hospital',
-                             'number_diagnoses', 'age', 'race']]
-
+#df_processed = df_processed[['readmit30', 'number_inpatient', 'diag_1_ccs',
+#                             'discharge_disposition_id',
+#                             'num_medications',
+#                             'num_lab_procedures', 'time_in_hospital',
+#                             'number_diagnoses', 'age', 'race']]
+df_processed = df_processed.drop(['diag_1', 'diag_2', 'diag_3', 'diabetesMed',
+                                  'total_previous_visits', 'diag_1_clean',
+                                  'diag_2_clean', 'diag_3_clean',
+                                  'metformin-pioglitazone',
+                                  'metformin-rosiglitazone',
+                                  'glimepiride-pioglitazone',
+                                  'glipizide-metformin', 'citoglipton',
+                                  'examide', 'troglitazone'], axis=1)
 print("Processed data Columns: \n")
 print(df_processed.columns.tolist())
 
@@ -88,6 +102,10 @@ for i, col in enumerate(X_train.columns):
 
 gam = LogisticGAM(terms, n_splines=8).gridsearch(X_train_resampled.values,
                                                  y_train_resampled.values)
+
+#gam = LogisticGAM(terms, n_splines=8).fit(X_train_resampled.values,
+#                                          y_train_resampled.values)
+
 print(gam.summary())
 print(gam.accuracy(X_test, y_test))
 
@@ -178,6 +196,6 @@ for idx in range(n_features):
 for k in range(n_features, len(axs)):
     fig.delaxes(axs[k])
 
-plt.tight_layout()
+#plt.tight_layout()
 plt.savefig('GAM_regression.png')
 plt.show()
