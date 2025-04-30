@@ -79,5 +79,19 @@ def load_and_clean(df):
     # Map each diagnosis column to CCS group using prefix match
     for col in ["diag_1_clean", "diag_2_clean", "diag_3_clean"]:
         df[col.replace("_clean", "_ccs")] = df[col].map(map_icd_to_ccs)
+
+    ## filter out encounters that died
+    df = df[~df['discharge_disposition_id'].isin([21, 22, 23, 11])]
+
+    df['max_glu_serum'] = df['max_glu_serum'].apply(lambda x: 'Unknown' if type(x) != str else x)
+    df['A1Cresult'] = df['A1Cresult'].apply(lambda x: 'Unknown' if type(x) != str else x)
+
+    categorical_columns = df.select_dtypes(include=['object', 'category']).columns.tolist()    
+    for cat_column in categorical_columns:
+        frequency_encoding = df[cat_column].value_counts(normalize=True).to_dict()
+        df[f'encoded_{cat_column}'] = df[cat_column].map(frequency_encoding)
+        df = df.drop(cat_column, axis=1)
+
+
     ## return the table
     return(df)
