@@ -2,6 +2,7 @@
 import pandas as pd
 from imblearn.over_sampling import SMOTE
 import math
+import time
 import cleaning
 import numpy as np
 import matplotlib.pyplot as plt
@@ -60,19 +61,12 @@ df_processed, scaler, cat_mapping, data_numerical_orig, numerical_columns = \
 print("Processed data head:")
 print(df_processed.head())
 
-#df_processed = df_processed[['readmit30', 'number_inpatient', 'diag_1_ccs',
-#                             'discharge_disposition_id',
-#                             'num_medications',
-#                             'num_lab_procedures', 'time_in_hospital',
-#                             'number_diagnoses', 'age', 'race']]
-df_processed = df_processed.drop(['diag_1', 'diag_2', 'diag_3', 'diabetesMed',
-                                  'total_previous_visits', 'diag_1_clean',
-                                  'diag_2_clean', 'diag_3_clean',
-                                  'metformin-pioglitazone',
-                                  'metformin-rosiglitazone',
-                                  'glimepiride-pioglitazone',
-                                  'glipizide-metformin', 'citoglipton',
-                                  'examide', 'troglitazone'], axis=1)
+df_processed = df_processed[['readmit30', 'number_inpatient', 'diag_1_ccs',
+                             'discharge_disposition_id',
+                             'num_medications',
+                             'num_lab_procedures', 'time_in_hospital',
+                             'number_diagnoses', 'age', 'race']]
+
 print("Processed data Columns: \n")
 print(df_processed.columns.tolist())
 
@@ -80,12 +74,16 @@ print(df_processed.columns.tolist())
 X = df_processed.drop('readmit30', axis=1)
 y = df_processed['readmit30']
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2,
-                                                    random_state=42)
+# split into temp set (to generate validation set and test set) and test set
+X_temp, X_test, y_temp, y_test = train_test_split(X, y, test_size=0.2,
+                                                  random_state=42)
+X_train, X_val, y_train, y_val = train_test_split(X_temp, y_temp,
+                                                  test_size=0.2,
+                                                  random_state=42)
 
 # oversample minority class (readmitted = T)
 X_train_resampled, y_train_resampled = SMOTE().fit_resample(X_train, y_train)
-
+start_time = time.time()
 # Build model specification: smooth for numerical, factor for categorical.
 terms = None
 for i, col in enumerate(X_train.columns):
@@ -98,12 +96,31 @@ for i, col in enumerate(X_train.columns):
 gam = LogisticGAM(terms, n_splines=8).gridsearch(X_train_resampled.values,
                                                  y_train_resampled.values)
 
-#gam = LogisticGAM(terms, n_splines=8).fit(X_train_resampled.values,
-#                                          y_train_resampled.values)
-
+end_time = time.time()
+print(f"\nGAM training takes {end_time - start_time:.2f} seconds")
 print(gam.summary())
-print(gam.accuracy(X_test, y_test))
 
+# --- Validation Set Threshold Optimization ---
+'''
+val_probs = gam.predict_proba(X_val)
+thresholds = [0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.45]
+
+for t in thresholds:
+    val_preds = (val_probs >= t).astype(int)
+    recall = recall_score(y_val, val_preds)
+    precision = classification_report(y_val, val_preds, output_dict=True)['1'][
+        'precision']
+    accuracy = classification_report(y_val, val_preds, output_dict=True)[
+        'accuracy']
+    f1_score = classification_report(y_val, val_preds, output_dict=True)['1'][
+        'f1-score'
+    ]
+
+    print(f"For threshold = {t: .2f}\n Recall = {recall: .2f}, "
+          f"precision = {precision:.2f}, accuracy = {accuracy:.2f}"
+          f"f1-score = {f1_score: .2f}\n")
+
+'''
 y_pred = gam.predict(X_test)
 mse = np.mean((y_test - y_pred)**2)
 mae = np.mean(np.abs(y_test - y_pred))
@@ -115,7 +132,7 @@ print("\n Model AUC Score: ", roc_auc_score(y_test, y_pred))
 
 #
 y_pred_proba = gam.predict_proba(X_test)
-y_pred_binary = (y_pred_proba >= 0.5).astype(int)
+y_pred_binary = (y_pred_proba >= 0.45).astype(int)
 
 # calculate recall
 recall = recall_score(y_test, y_pred_binary)
@@ -194,3 +211,4 @@ for k in range(n_features, len(axs)):
 #plt.tight_layout()
 plt.savefig('GAM_regression.png')
 plt.show()
+
